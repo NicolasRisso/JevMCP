@@ -3,6 +3,7 @@ import json
 
 import httpx
 import pytest
+from mcp.server.mcpserver.exceptions import ToolError
 
 from jev_mcp.client import JevClient
 from jev_mcp.config import Settings
@@ -54,3 +55,17 @@ def test_validate_questions_rejects_bad_type():
 def test_validate_questions_requires_criteria_for_choice():
     with pytest.raises(ValueError):
         validate_questions({"q": {"type": "choice", "instructions": "x"}})
+
+
+def test_tool_reports_readable_errors(monkeypatch):
+    from jev_mcp.server import mcp
+
+    for k in ("TYPESAFE_API_KEY", "OPENROUTER_API_KEY", "JEV_PROVIDER"):
+        monkeypatch.delenv(k, raising=False)
+    q = {"q": {"type": "noul", "instructions": "x"}}
+
+    # ToolError (unlike other exceptions) is shown to the agent with its message.
+    with pytest.raises(ToolError, match="type must be one of"):
+        asyncio.run(mcp.call_tool("jev_ask", {"questions": {"q": {"type": "bool"}}}))
+    with pytest.raises(ToolError, match="OPENROUTER_API_KEY"):
+        asyncio.run(mcp.call_tool("jev_ask", {"questions": q, "texts": {"a": "hi"}}))

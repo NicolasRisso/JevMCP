@@ -7,12 +7,13 @@ import json
 from typing import Any
 
 from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import ToolAnnotations
 
 from jev_mcp import __version__
 from jev_mcp.client import JevClient, JevError
 from jev_mcp.compact import compact_response, is_unsure
-from jev_mcp.config import Settings
+from jev_mcp.config import ConfigError, Settings
 from jev_mcp.sources import iter_items
 
 VALID_TYPES = {"noul", "choice", "score"}
@@ -84,8 +85,12 @@ async def jev_ask(
       noul -> P(yes) or [p, "?"]; choice/score -> [value, confidence] (+ top-2 probs if unsure).
     Jev is weak at counting, math, dates and multi-step reasoning; verify "unsure" items yourself.
     """
-    validate_questions(questions)
-    settings = Settings.from_env()
+    try:
+        validate_questions(questions)
+        settings = Settings.from_env()
+    except (ValueError, ConfigError) as e:
+        # ToolError reaches the agent with its message; other exceptions become a generic error.
+        raise ToolError(str(e)) from e
     items = list(iter_items(paths, texts, settings.chunk_chars))
     if not items:
         return json.dumps({"error": "no readable text found in paths/texts"})
