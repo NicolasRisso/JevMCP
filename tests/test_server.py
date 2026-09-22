@@ -103,7 +103,7 @@ def test_identical_errors_collapse_into_one_tool_error():
 
 
 def test_common_root_strips_shared_directory():
-    sep = os.sep
+    sep = "/"
     ids = [f"reviews{sep}2026{sep}a.txt", f"reviews{sep}2026{sep}b.txt#1"]
     assert common_root(ids) == f"reviews{sep}2026{sep}"
     assert common_root(["a", "b"]) == ""

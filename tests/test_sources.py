@@ -29,3 +29,10 @@ def test_expand_paths_glob_dir_and_skip_binary(tmp_path):
 def test_iter_items_labels_chunks():
     items = list(iter_items(None, {"note": "a\nb\nc\n"}, 2))
     assert [i for i, _ in items] == ["note#0", "note#1", "note#2"]
+
+
+def test_ids_use_forward_slashes(tmp_path):
+    (tmp_path / "sub").mkdir()
+    (tmp_path / "sub" / "a.txt").write_text("x")
+    (path,) = expand_paths([str(tmp_path)])
+    assert "\\" not in path and path.endswith("sub/a.txt")

@@ -5,6 +5,7 @@ from __future__ import annotations
 import glob
 import os
 from collections.abc import Iterator
+from pathlib import Path
 
 BINARY_SNIFF_BYTES = 8192
 
@@ -16,7 +17,8 @@ def expand_paths(sources: list[str]) -> list[str]:
         if os.path.isdir(src):
             src = os.path.join(src, "**", "*")
         matches = glob.glob(src, recursive=True) if glob.has_magic(src) else [src]
-        found.update(os.path.normpath(m) for m in matches if os.path.isfile(m))
+        # Forward slashes: valid on Windows too, and no JSON escaping ("a\b" costs 2 chars per separator).
+        found.update(Path(os.path.normpath(m)).as_posix() for m in matches if os.path.isfile(m))
     return sorted(found)
 
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
+import posixpath
 from typing import Any
 
 from mcp.server.mcpserver import MCPServer
@@ -86,16 +86,16 @@ def shrink(results: dict[str, Any], unsure: list[str], single_question: bool) ->
 
 
 def common_root(ids: list[str]) -> str:
-    """Longest shared directory prefix (with trailing separator) of path-like ids, else ''."""
+    """Longest shared directory prefix (with trailing /) of path-like ids, else ''. Ids use forward slashes."""
     if len(ids) < 2:
         return ""
     try:
-        root = os.path.commonpath([os.path.dirname(i.split("#")[0]) for i in ids])
+        root = posixpath.commonpath([posixpath.dirname(i.split("#")[0]) for i in ids])
     except ValueError:  # mixed drives or absolute/relative
         return ""
     if not root:
         return ""
-    prefix = root.rstrip("\\/") + os.sep
+    prefix = root.rstrip("/") + "/"
     return prefix if all(i.startswith(prefix) for i in ids) else ""
 
 
