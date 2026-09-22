@@ -8,7 +8,7 @@ JevMCP is a Python MCP server that exposes TypeSafe's Jev model (fast typed yes/
 
 ## Layout
 
-- `src/jev_mcp/`: package (`server.py` tools, `client.py` HTTP, `sources.py` file expansion and chunking, `compact.py` output shrinking, `config.py` env settings)
+- `src/jev_mcp/`: package (`cli.py` entry point and install/uninstall/check, `server.py` tools, `client.py` HTTP, `sources.py` file expansion and chunking, `compact.py` output shrinking, `config.py` env settings)
 - `tests/`: pytest suite. Uses `httpx.MockTransport`, so no network or API key is needed.
 - `docs/`: `architecture.md`, `tools.md` (tool reference), `limitations.md`
 
@@ -17,7 +17,9 @@ JevMCP is a Python MCP server that exposes TypeSafe's Jev model (fast typed yes/
 ```bash
 pip install -e .[dev]
 pytest
-jev-mcp            # run the server over stdio (needs TYPESAFE_API_KEY)
+jev-mcp            # run the server over stdio (needs OPENROUTER_API_KEY or TYPESAFE_API_KEY)
+jev-mcp check      # one real request per configured provider
+jev-mcp install    # register with Claude Code for the current repo (local scope)
 ```
 
 ## Commits

@@ -143,11 +143,3 @@ Weak at counting, math, dates, multi-step reasoning."""
 
 
 mcp._tool_manager.get_tool("jev_ask").parameters = JEV_ASK_SCHEMA
-
-
-def main() -> None:
-    mcp.run()
-
-
-if __name__ == "__main__":
-    main()

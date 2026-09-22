@@ -21,22 +21,54 @@ agent ◀── {file: {q: [answer, confidence]}, unsure: [...]} ◀── compa
 
 ## Install
 
+### 1. Get the package
+
+From a clone (recommended while JevMCP is pre-release):
+
 ```bash
-pip install git+https://github.com/NicolasRisso/JevMCP
+git clone https://github.com/NicolasRisso/JevMCP
+```
+```bash
+cd JevMCP && python -m venv .venv && .venv/Scripts/pip install -e .
 ```
 
-You need **one** API key. Either one works:
+On macOS/Linux use `.venv/bin/pip`. It's an editable install, so a `git pull` takes effect in every repo using it the next time the server starts.
 
-- **TypeSafe directly:** get a key at https://console.typesafe.ai/keys
-  ```bash
-  claude mcp add jev -e TYPESAFE_API_KEY=your_key -- jev-mcp
-  ```
-- **OpenRouter:** use your existing OpenRouter key. Jev is served through OpenRouter's alpha Decisions endpoint.
-  ```bash
-  claude mcp add jev -e OPENROUTER_API_KEY=your_key -- jev-mcp
-  ```
+### 2. Provide an API key
 
-For any other MCP client, run `jev-mcp` over stdio with one of those keys set.
+You need **one** of these. Either one works:
+
+- `OPENROUTER_API_KEY`: your OpenRouter key. Jev is served through OpenRouter's alpha Decisions endpoint.
+- `TYPESAFE_API_KEY`: from https://console.typesafe.ai/keys
+
+Set it as a user environment variable so every repo can use it without copying it around. On Windows, set it under *System Properties → Environment Variables*; on macOS/Linux, add `export OPENROUTER_API_KEY=...` to your shell profile. Then restart Claude Code.
+
+### 3. Register it in a repo (one command)
+
+From the root of the repo where you want to use it:
+
+```bash
+D:/path/to/JevMCP/.venv/Scripts/jev-mcp install
+```
+
+This runs `claude mcp add jev --scope local -- <that venv's python> -m jev_mcp`:
+- **Local scope:** only this repo, and stored in your Claude Code user config, **not** in the repo. Nothing gets committed.
+- `--scope user` registers it once for every repo.
+- `--provider openrouter` and `--fallback` pin the provider settings described below.
+- **Keys are never written by the installer.** The server reads them from your environment.
+- `jev-mcp uninstall` removes the registration.
+
+### 4. Verify
+
+```bash
+D:/path/to/JevMCP/.venv/Scripts/jev-mcp check
+```
+
+This sends one tiny request (a fraction of a cent) to each configured provider and prints the latency and the result. It never prints keys.
+
+### Other MCP clients
+
+Run `python -m jev_mcp` (or `jev-mcp`) over stdio with a key in the environment.
 
 ## Example
 

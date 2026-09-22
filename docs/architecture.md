@@ -2,6 +2,7 @@
 
 ```
 src/jev_mcp/
+  cli.py       Entry point: serve (default), install/uninstall via `claude mcp`, check
   server.py    MCP tool definitions (MCPServer, mcp 2.x), validation, batch orchestration
   client.py    Async HTTP client: retries, provider fallback, disables dead keys
   sources.py   paths/globs/dirs/texts -> (id, text) items; binary skip; chunking

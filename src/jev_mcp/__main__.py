@@ -1,3 +1,3 @@
-from jev_mcp.server import main
+from jev_mcp.cli import main
 
 main()
