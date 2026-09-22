@@ -20,6 +20,17 @@ pytest
 jev-mcp            # run the server over stdio (needs TYPESAFE_API_KEY)
 ```
 
+## Commits
+
+- Use [Conventional Commits](https://www.conventionalcommits.org): `<type>(<optional scope>): <summary>`, imperative, lower case, no trailing period, summary ≤ 72 chars.
+  - `feat`: new user-facing capability · `fix`: bug fix · `perf`: faster or smaller output/context
+  - `refactor`: no behavior change · `test`: tests only · `docs`: docs only
+  - `build`: packaging/dependencies · `ci`: CI config · `chore`: tooling, hooks, housekeeping
+  - Breaking change: `feat!:` plus a `BREAKING CHANGE:` footer.
+  - Examples: `feat(provider): support OpenRouter keys`, `docs: document threshold`.
+- **Prefer small commits over big ones.** One logical change per commit. Split unrelated edits (e.g. a feature and a docs typo) into separate commits. Every commit must pass `pytest` on its own.
+- A pre-push hook runs the test suite and blocks the push if it fails. Enable it once per clone with `git config core.hooksPath .githooks`. Don't bypass it with `--no-verify`.
+
 ## Rules
 
 - Keep tool output compact. Any new field in a tool response costs every agent that uses it tokens on every call. Justify it.
