@@ -66,6 +66,22 @@ D:/path/to/JevMCP/.venv/Scripts/jev-mcp check
 
 This sends one tiny request (a fraction of a cent) to each configured provider and prints the latency and the result. It never prints keys.
 
+### Linux servers (over SSH)
+
+On a headless box, skip the clone and install straight from GitHub with [pipx](https://pipx.pypa.io):
+
+```bash
+pipx install git+https://github.com/NicolasRisso/JevMCP.git
+```
+```bash
+echo 'export OPENROUTER_API_KEY=sk-or-...' >> ~/.bashrc && source ~/.bashrc
+```
+```bash
+jev-mcp install --scope user && jev-mcp check
+```
+
+The `claude` CLI must be installed on that server. Update later with `pipx upgrade jev-mcp`. For many servers, put these lines in a script and run `ssh host 'bash -s' < setup.sh`.
+
 ### Other MCP clients
 
 Run `python -m jev_mcp` (or `jev-mcp`) over stdio with a key in the environment.
