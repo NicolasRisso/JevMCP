@@ -24,7 +24,7 @@ These are sent unchanged to the [TypeSafe API](https://docs.typesafe.ai/api.md).
 |---|---|---|
 | `noul` | Yes/no | Optional text clarifying what counts as yes |
 | `choice` | One of a fixed set of options (up to 255) | `{option: description}` |
-| `score` | A position on an ordered scale | 2–10 level descriptions, from low to high |
+| `score` | A position on an ordered scale | List of 2–10 level descriptions, from low to high. The answer is the **0-based** level position, and fractions are allowed (e.g. `1.4` falls between the 2nd and 3rd level) |
 
 ### Compact answer format
 

@@ -15,6 +15,8 @@ From TypeSafe's [jev-1.13 jaggedness notes](https://docs.typesafe.ai/model-jagge
 
 ## Open items
 
-- Confirm the exact `criteria` format for `score` against the live API.
+(Verified live via OpenRouter on 2026-09-22: all three question types, a list of levels as `score` criteria, and 0-based scores.)
+
+
 - Consider built-in chunk aggregation modes (`any` / `all` / `max`).
 - Estimate token counts per chunk instead of using a character count.

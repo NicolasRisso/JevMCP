@@ -125,7 +125,8 @@ async def jev_ask(
     verbose: bool = False,
 ) -> str:
     """Answer typed questions about files via the Jev classifier without reading them into your context.
-noul=yes/no (criteria optional); choice: criteria {option:desc}; score: criteria [2-10 levels, low->high].
+noul=yes/no (criteria optional); choice: criteria {option:desc}; score: criteria [2-10 levels, low->high],
+answer is the 0-based level position (fractional allowed).
 Batch all questions per call. Out: {root?,results:{item:answer or {qid:answer}},unsure?}.
 noul -> P(yes) | [p,"?"]; choice/score -> [value,conf(,top2 probs)]. Open unsure items yourself.
 Weak at counting, math, dates, multi-step reasoning."""
