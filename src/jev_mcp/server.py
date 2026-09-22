@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import posixpath
 from typing import Any
 
@@ -20,6 +21,8 @@ from jev_mcp.sources import iter_items
 VALID_TYPES = {"noul", "choice", "score"}
 
 mcp = MCPServer("jev", version=__version__)
+# The server logs at INFO, which makes httpx log every request line to stderr.
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
 def validate_questions(questions: dict[str, Any]) -> None:
