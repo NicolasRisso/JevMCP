@@ -49,13 +49,15 @@ For any other MCP client, run `jev-mcp` over stdio with one of those keys set.
 }
 ```
 
-Returns:
+Returns (the shared folder moves into `root`, and `unsure` lists what to check by hand):
 
 ```json
-{"results":{"reviews/1.txt":{"mentions_cleanliness":0.96,"sentiment":["positive",0.94]},
-            "reviews/2.txt":{"mentions_cleanliness":[0.51,"?"],"sentiment":["mixed",0.42,{"mixed":0.5,"negative":0.41}]}},
- "unsure":["reviews/2.txt"],"items":2,"input_tokens":812}
+{"root":"reviews/","results":{"1.txt":{"mentions_cleanliness":0.96,"sentiment":["positive",0.94]},
+ "2.txt":{"mentions_cleanliness":[0.51,"?"],"sentiment":["mixed",0.42,{"mixed":0.5,"negative":0.41}]}},
+ "unsure":["2.txt"]}
 ```
+
+The whole tool definition adds about 1 KB to the agent's context.
 
 See [docs/tools.md](docs/tools.md) for the full tool reference.
 

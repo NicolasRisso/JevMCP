@@ -1,5 +1,7 @@
 import asyncio
+import inspect
 import json
+import os
 
 import httpx
 import pytest
@@ -7,7 +9,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 
 from jev_mcp.client import JevClient
 from jev_mcp.config import Settings
-from jev_mcp.server import run_batch, validate_questions
+from jev_mcp.server import JEV_ASK_SCHEMA, common_root, jev_ask, run_batch, shrink, validate_questions
 
 
 def fake_transport(calls):
@@ -39,11 +41,12 @@ def test_run_batch_compacts_and_flags_unsure():
             return await run_batch(client, items, questions, 0.6, verbose=False)
 
     out = asyncio.run(go())
-    assert out["results"]["a"] == {"wants_refund": 0.97}
-    assert out["results"]["b"] == {"wants_refund": [0.52, "?"]}
+    # single question -> answers unwrapped; no token/item counters in compact mode
+    assert out["results"]["a"] == 0.97
+    assert out["results"]["b"] == [0.52, "?"]
     assert "error" in out["results"]["c"]
     assert out["unsure"] == ["b"]
-    assert out["input_tokens"] == 20
+    assert set(out) == {"results", "unsure"}
     assert calls[0]["model"] == "jev-latest"
 
 
@@ -69,3 +72,49 @@ def test_tool_reports_readable_errors(monkeypatch):
         asyncio.run(mcp.call_tool("jev_ask", {"questions": {"q": {"type": "bool"}}}))
     with pytest.raises(ToolError, match="OPENROUTER_API_KEY"):
         asyncio.run(mcp.call_tool("jev_ask", {"questions": q, "texts": {"a": "hi"}}))
+
+
+def ok_transport():
+    return httpx.MockTransport(
+        lambda r: httpx.Response(200, json={"answers": {"x": {"type": "noul", "noul": 0.99}, "y": {"type": "noul", "noul": 0.01}}})
+    )
+
+
+def test_multi_question_keeps_ids_and_omits_empty_unsure():
+    async def go():
+        async with JevClient(Settings(api_key="k"), transport=ok_transport()) as c:
+            qs = {"x": {"type": "noul", "instructions": "x"}, "y": {"type": "noul", "instructions": "y"}}
+            return await run_batch(c, [("a", "t")], qs, 0.6, verbose=False)
+
+    assert asyncio.run(go()) == {"results": {"a": {"x": 0.99, "y": 0.01}}}
+
+
+def test_identical_errors_collapse_into_one_tool_error():
+    bad = httpx.MockTransport(lambda r: httpx.Response(401, text="invalid key"))
+
+    async def go():
+        async with JevClient(Settings(api_key="k"), transport=bad) as c:
+            return await run_batch(c, [("a", "t"), ("b", "t")], {"q": {"type": "noul", "instructions": "q"}}, 0.6, False)
+
+    with pytest.raises(ToolError, match="401"):
+        asyncio.run(go())
+
+
+def test_common_root_strips_shared_directory():
+    sep = os.sep
+    ids = [f"reviews{sep}2026{sep}a.txt", f"reviews{sep}2026{sep}b.txt#1"]
+    assert common_root(ids) == f"reviews{sep}2026{sep}"
+    assert common_root(["a", "b"]) == ""
+    assert common_root([f"x{sep}a.txt"]) == ""
+    out = shrink({ids[0]: {"q": 1}, ids[1]: {"q": 0}}, [ids[1]], single_question=True)
+    assert out == {"root": f"reviews{sep}2026{sep}", "results": {"a.txt": 1, "b.txt#1": 0}, "unsure": ["b.txt#1"]}
+
+
+def test_advertised_schema_matches_signature_and_has_no_output_schema():
+    from jev_mcp.server import mcp
+
+    params = set(inspect.signature(jev_ask).parameters)
+    assert set(JEV_ASK_SCHEMA["properties"]) == params
+    (tool,) = asyncio.run(mcp.list_tools())
+    assert tool.output_schema is None
+    assert tool.input_schema == JEV_ASK_SCHEMA

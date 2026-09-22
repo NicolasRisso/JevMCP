@@ -38,11 +38,30 @@ For `noul`, confidence is calculated as `|2p − 1|`. For `choice` and `score`, 
 
 ### Response
 
+Compact mode (the default) is built to cost the agent as few tokens as possible:
+
 ```json
-{"results": {"<item>": {"<qid>": "<answer>"}}, "unsure": ["<item>"], "items": 3, "input_tokens": 1234}
+{"root": "reviews/", "results": {"1.txt": 0.96, "2.txt": [0.51, "?"]}, "unsure": ["2.txt"]}
 ```
 
-If a single item fails, its entry is `{"error": "..."}` and the rest of the batch still returns.
+- `root` holds the directory prefix shared by all items. Item keys are relative to it. It is omitted when there is no shared prefix.
+- With **one** question, each item maps directly to its answer. With several, each item maps to `{qid: answer}`.
+- `unsure` is omitted when empty.
+- An item that failed maps to `{"error": "..."}`. If **every** item fails with the same error (for example a bad key), the call fails once with that message instead.
+- `verbose: true` returns `{results: {item: {qid: raw Jev answer}}, unsure, input_tokens}` with full paths.
+
+Input errors (bad question, missing key, no readable text, too many items) are returned as tool errors with a readable message.
+
+## Context budget
+
+What an agent pays for JevMCP:
+
+| What | When | Size |
+|---|---|---|
+| Tool definition | Every turn, when the server is enabled | ~1 KB (one tool, hand-written schema, no output schema) |
+| Result | Per call | A few characters per answer, plus `root` and `unsure` |
+
+Rules that keep it this way (see AGENTS.md): one tool, a terse docstring, a hand-maintained `JEV_ASK_SCHEMA`, `structured_output=False` (otherwise every result would be sent twice), and no counters in compact output.
 
 ### Tips for agents
 

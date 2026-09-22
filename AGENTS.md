@@ -35,7 +35,8 @@ jev-mcp            # run the server over stdio (needs TYPESAFE_API_KEY)
 
 - Keep tool output compact. Any new field in a tool response costs every agent that uses it tokens on every call. Justify it.
 - Tools take references (paths, globs, ids), not large pasted content.
-- Tool docstrings are loaded into agents' context. Keep them short and precise.
+- Tool docstrings and schemas are loaded into agents' context on every turn. Keep them short and precise. `JEV_ASK_SCHEMA` is hand-written, so keep it in sync with the function signature (a test enforces this).
+- Keep `structured_output=False` on tools that return JSON strings. Otherwise the SDK sends each result twice (as text and as structured content).
 - Never call the real Jev API in tests. Use `httpx.MockTransport`.
 - Never commit API keys or `.env`.
 - When the Jev API changes, update `docs/architecture.md` ("Jev API facts") along with the code.

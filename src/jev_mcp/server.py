@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from typing import Any
 
 from mcp.server.mcpserver import MCPServer
@@ -57,15 +58,62 @@ async def run_batch(
             unsure.append(item_id)
 
     await asyncio.gather(*(one(i, s) for i, s in items))
-    return {
-        "results": {k: results[k] for k, _ in items},
-        "unsure": sorted(unsure),
-        "items": len(items),
-        "input_tokens": tokens,
+
+    errors = {r["error"] for r in results.values() if "error" in r}
+    if len(errors) == 1 and all("error" in r for r in results.values()):
+        # e.g. a bad key: report once instead of once per item.
+        raise ToolError(errors.pop())
+
+    ordered = {k: results[k] for k, _ in items}
+    if verbose:
+        return {"results": ordered, "unsure": sorted(unsure), "input_tokens": tokens}
+    return shrink(ordered, sorted(unsure), single_question=len(questions) == 1)
+
+
+def shrink(results: dict[str, Any], unsure: list[str], single_question: bool) -> dict[str, Any]:
+    """Cut repeated bytes: shared path prefix goes to `root`, one-question answers are unwrapped."""
+    root = common_root(list(results))
+    cut = len(root)
+    out: dict[str, Any] = {}
+    if root:
+        out["root"] = root
+    out["results"] = {
+        k[cut:]: (next(iter(v.values())) if single_question and "error" not in v else v) for k, v in results.items()
     }
+    if unsure:
+        out["unsure"] = [u[cut:] for u in unsure]
+    return out
 
 
-@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, openWorldHint=True))
+def common_root(ids: list[str]) -> str:
+    """Longest shared directory prefix (with trailing separator) of path-like ids, else ''."""
+    if len(ids) < 2:
+        return ""
+    try:
+        root = os.path.commonpath([os.path.dirname(i.split("#")[0]) for i in ids])
+    except ValueError:  # mixed drives or absolute/relative
+        return ""
+    if not root:
+        return ""
+    prefix = root.rstrip("\\/") + os.sep
+    return prefix if all(i.startswith(prefix) for i in ids) else ""
+
+
+# Hand-written so the definition every agent loads stays small (no titles, no anyOf-null noise).
+JEV_ASK_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "questions": {"type": "object", "description": "{id:{type:noul|choice|score,instructions,criteria}}"},
+        "paths": {"type": "array", "items": {"type": "string"}, "description": "files, globs or dirs"},
+        "texts": {"type": "object", "additionalProperties": {"type": "string"}, "description": "{id:text}"},
+        "threshold": {"type": "number", "default": 0.6},
+        "verbose": {"type": "boolean", "default": False},
+    },
+    "required": ["questions"],
+}
+
+
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, openWorldHint=True), structured_output=False)
 async def jev_ask(
     questions: dict[str, Any],
     paths: list[str] | None = None,
@@ -73,18 +121,11 @@ async def jev_ask(
     threshold: float = 0.6,
     verbose: bool = False,
 ) -> str:
-    """Ask Jev (fast typed classifier) questions about files WITHOUT reading them into your context.
-
-    questions: {id: {"type": "noul"|"choice"|"score", "instructions": str, "criteria": ...}}
-      noul: yes/no, criteria optional. choice: criteria {option: description} (<=255).
-      score: criteria = 2-10 level descriptions, low to high.
-      All questions are answered in parallel per item, so batch them.
-    paths: files, globs ("src/**/*.py") or directories. Large files are chunked as path#N.
-    texts: {id: text} for small inline content.
-    Returns {results: {item: {qid: answer}}, unsure: [items], items, input_tokens}.
-      noul -> P(yes) or [p, "?"]; choice/score -> [value, confidence] (+ top-2 probs if unsure).
-    Jev is weak at counting, math, dates and multi-step reasoning; verify "unsure" items yourself.
-    """
+    """Answer typed questions about files via the Jev classifier without reading them into your context.
+noul=yes/no (criteria optional); choice: criteria {option:desc}; score: criteria [2-10 levels, low->high].
+Batch all questions per call. Out: {root?,results:{item:answer or {qid:answer}},unsure?}.
+noul -> P(yes) | [p,"?"]; choice/score -> [value,conf(,top2 probs)]. Open unsure items yourself.
+Weak at counting, math, dates, multi-step reasoning."""
     try:
         validate_questions(questions)
         settings = Settings.from_env()
@@ -93,12 +134,15 @@ async def jev_ask(
         raise ToolError(str(e)) from e
     items = list(iter_items(paths, texts, settings.chunk_chars))
     if not items:
-        return json.dumps({"error": "no readable text found in paths/texts"})
+        raise ToolError("no readable text found in paths/texts")
     if len(items) > settings.max_items:
-        return json.dumps({"error": f"{len(items)} items exceeds JEV_MAX_ITEMS={settings.max_items}; narrow the glob"})
+        raise ToolError(f"{len(items)} items exceeds JEV_MAX_ITEMS={settings.max_items}; narrow the glob")
     async with JevClient(settings) as client:
         out = await run_batch(client, items, questions, threshold, verbose)
     return json.dumps(out, separators=(",", ":"), ensure_ascii=False)
+
+
+mcp._tool_manager.get_tool("jev_ask").parameters = JEV_ASK_SCHEMA
 
 
 def main() -> None:
