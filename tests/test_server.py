@@ -118,3 +118,21 @@ def test_advertised_schema_matches_signature_and_has_no_output_schema():
     (tool,) = asyncio.run(mcp.list_tools())
     assert tool.output_schema is None
     assert tool.input_schema == JEV_ASK_SCHEMA
+
+
+def test_network_error_is_per_item_not_fatal(monkeypatch):
+    real_sleep = asyncio.sleep
+    monkeypatch.setattr("jev_mcp.client.asyncio.sleep", lambda s: real_sleep(0))
+
+    def handler(request):
+        if json.loads(request.content)["state"] == "down":
+            raise httpx.ConnectError("refused")
+        return httpx.Response(200, json={"answers": {"q": {"type": "noul", "noul": 0.9}}})
+
+    async def go():
+        async with JevClient(Settings(api_key="k"), transport=httpx.MockTransport(handler)) as c:
+            return await run_batch(c, [("a", "up"), ("b", "down")], {"q": {"type": "noul", "instructions": "q"}}, 0.6, False)
+
+    out = asyncio.run(go())
+    assert out["results"]["a"] == 0.9
+    assert "network error" in out["results"]["b"]["error"]

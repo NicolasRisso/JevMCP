@@ -38,7 +38,13 @@ class JevClient:
         payload = {"model": self._settings.model, "state": state, "questions": questions}
         async with self._sem:
             for attempt in range(MAX_ATTEMPTS):
-                r = await self._http.post(self._settings.api_url, json=payload)
+                try:
+                    r = await self._http.post(self._settings.api_url, json=payload)
+                except httpx.TransportError as e:
+                    if attempt < MAX_ATTEMPTS - 1:
+                        await asyncio.sleep(2**attempt)
+                        continue
+                    raise JevError(f"network error: {e!r}") from e
                 if r.status_code in RETRY_STATUSES and attempt < MAX_ATTEMPTS - 1:
                     await asyncio.sleep(2**attempt)
                     continue
