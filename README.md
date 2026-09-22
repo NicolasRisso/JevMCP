@@ -1,8 +1,10 @@
 # JevMCP
 
-An open-source [MCP](https://modelcontextprotocol.io) server that lets coding agents (Claude Code, Cursor, etc.) hand off **yes/no, enum and scale judgements** to [TypeSafe's Jev](https://typesafe.ai/blog/introducing-system-one-models-and-jev) model.
+**Give your AI coding agent a fast, cheap second brain for yes/no, multiple-choice and scoring questions.**
 
-Why use it: an agent that has to answer "which of these 300 files mention X?" normally reads all 300 files into its context. With JevMCP, **Jev reads the files** and the agent only gets back a compact table of answers with confidence scores. That uses fewer tokens, runs faster, and costs very little (Jev charges $0.042 per million input tokens).
+JevMCP is an open-source [MCP](https://modelcontextprotocol.io) server that lets agents such as Claude Code and Cursor hand those questions off to [TypeSafe's Jev](https://typesafe.ai/blog/introducing-system-one-models-and-jev). Jev reads the files, and the agent gets back a compact answer with a confidence score for each one. It works with a TypeSafe **or** an OpenRouter API key.
+
+Why it helps: to answer "which of these 300 files mention X?", an agent normally reads all 300 files into its context. With JevMCP it gets back a short table of answers instead. That uses fewer tokens, runs faster, and costs very little (Jev charges $0.042 per million input tokens, and each request takes 70–500 ms).
 
 > Status: early (0.1.0). The API shape may change.
 
