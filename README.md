@@ -69,12 +69,29 @@ See [docs/tools.md](docs/tools.md) for the full tool reference.
 |---|---|---|
 | `TYPESAFE_API_KEY` | | TypeSafe key. Set this or `OPENROUTER_API_KEY` |
 | `OPENROUTER_API_KEY` | | OpenRouter key. Set this or `TYPESAFE_API_KEY` |
-| `JEV_PROVIDER` | auto | `typesafe` or `openrouter`. Auto picks TypeSafe if its key is set, otherwise OpenRouter |
-| `JEV_MODEL` | `jev-latest` / `typesafe/jev-1.13` | Model name sent to the API (TypeSafe / OpenRouter default) |
-| `JEV_API_URL` | provider's endpoint | Override the endpoint URL |
+| `JEV_PROVIDER` | auto | Which key to use: `typesafe` or `openrouter`. Auto picks TypeSafe if its key is set, otherwise OpenRouter |
+| `JEV_FALLBACK` | off | `true`: if the chosen provider fails, retry on the other one (needs both keys) |
+| `JEV_MODEL` | `jev-latest` / `typesafe/jev-1.13` | Model for the **primary** provider (TypeSafe / OpenRouter default) |
+| `JEV_API_URL` | provider's endpoint | Endpoint URL for the **primary** provider |
 | `JEV_CONCURRENCY` | `16` | Max requests to Jev in flight at once |
 | `JEV_CHUNK_CHARS` | `60000` | Files larger than this are split into `path#N` chunks |
 | `JEV_MAX_ITEMS` | `500` | Refuses a call that would send more than this many items (safety cap) |
+
+### Using both keys
+
+If both keys are set, `JEV_PROVIDER` chooses which one to use. Set `JEV_FALLBACK=true` to use the other key when the primary fails:
+
+```bash
+claude mcp add jev -e OPENROUTER_API_KEY=or_key -e TYPESAFE_API_KEY=ts_key -e JEV_PROVIDER=openrouter -e JEV_FALLBACK=true -- jev-mcp
+```
+
+| Primary fails with | What happens |
+|---|---|
+| Network error, 5xx, 429/529 after one retry | That item is retried on the fallback provider |
+| 401/402/403 (bad key, no credits, forbidden) | Falls back, and the primary is skipped for the rest of the call |
+| 400/413/422 (the request itself is invalid) | No fallback, since the other provider would reject it too. The error is reported |
+
+Fallback is invisible to the agent. The answers look the same, so no extra tokens are spent. If both providers fail, the error names each one.
 
 ## Limitations
 

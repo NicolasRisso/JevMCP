@@ -2,7 +2,7 @@ import pytest
 
 from jev_mcp.config import ConfigError, Settings
 
-KEYS = ("TYPESAFE_API_KEY", "OPENROUTER_API_KEY", "JEV_PROVIDER", "JEV_MODEL", "JEV_API_URL")
+KEYS = ("TYPESAFE_API_KEY", "OPENROUTER_API_KEY", "JEV_PROVIDER", "JEV_MODEL", "JEV_API_URL", "JEV_FALLBACK")
 
 
 @pytest.fixture(autouse=True)
@@ -11,37 +11,59 @@ def clean_env(monkeypatch):
         monkeypatch.delenv(k, raising=False)
 
 
+def providers():
+    return [e.provider for e in Settings.from_env().endpoints]
+
+
 def test_typesafe_key_selects_typesafe(monkeypatch):
     monkeypatch.setenv("TYPESAFE_API_KEY", "ts")
-    s = Settings.from_env()
-    assert (s.provider, s.api_key, s.model) == ("typesafe", "ts", "jev-latest")
-    assert s.api_url.endswith("/v1/systemone")
+    (ep,) = Settings.from_env().endpoints
+    assert (ep.provider, ep.api_key, ep.model) == ("typesafe", "ts", "jev-latest")
+    assert ep.url.endswith("/v1/systemone")
 
 
 def test_openrouter_key_selects_openrouter(monkeypatch):
     monkeypatch.setenv("OPENROUTER_API_KEY", "or")
-    s = Settings.from_env()
-    assert (s.provider, s.api_key, s.model) == ("openrouter", "or", "typesafe/jev-1.13")
-    assert s.api_url == "https://openrouter.ai/api/alpha/decisions"
+    (ep,) = Settings.from_env().endpoints
+    assert (ep.provider, ep.api_key, ep.model) == ("openrouter", "or", "typesafe/jev-1.13")
+    assert ep.url == "https://openrouter.ai/api/alpha/decisions"
 
 
-def test_typesafe_wins_when_both_set(monkeypatch):
+def test_typesafe_wins_when_both_set_and_no_fallback_by_default(monkeypatch):
     monkeypatch.setenv("TYPESAFE_API_KEY", "ts")
     monkeypatch.setenv("OPENROUTER_API_KEY", "or")
-    assert Settings.from_env().provider == "typesafe"
+    assert providers() == ["typesafe"]
 
 
 def test_explicit_provider_overrides(monkeypatch):
     monkeypatch.setenv("TYPESAFE_API_KEY", "ts")
     monkeypatch.setenv("OPENROUTER_API_KEY", "or")
     monkeypatch.setenv("JEV_PROVIDER", "openrouter")
-    assert Settings.from_env().api_key == "or"
+    assert providers() == ["openrouter"]
 
 
-def test_model_override(monkeypatch):
+@pytest.mark.parametrize("primary,expected", [("typesafe", ["typesafe", "openrouter"]), ("openrouter", ["openrouter", "typesafe"])])
+def test_fallback_adds_other_provider_after_primary(monkeypatch, primary, expected):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "ts")
     monkeypatch.setenv("OPENROUTER_API_KEY", "or")
-    monkeypatch.setenv("JEV_MODEL", "~typesafe/jev-latest")
-    assert Settings.from_env().model == "~typesafe/jev-latest"
+    monkeypatch.setenv("JEV_PROVIDER", primary)
+    monkeypatch.setenv("JEV_FALLBACK", "true")
+    assert providers() == expected
+
+
+def test_fallback_without_other_key_is_ignored(monkeypatch):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "ts")
+    monkeypatch.setenv("JEV_FALLBACK", "1")
+    assert providers() == ["typesafe"]
+
+
+def test_model_override_applies_to_primary_only(monkeypatch):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "ts")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "or")
+    monkeypatch.setenv("JEV_FALLBACK", "on")
+    monkeypatch.setenv("JEV_MODEL", "jev-1.13.0")
+    primary, fallback = Settings.from_env().endpoints
+    assert (primary.model, fallback.model) == ("jev-1.13.0", "typesafe/jev-1.13")
 
 
 def test_no_key_errors():

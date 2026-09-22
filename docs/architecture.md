@@ -3,10 +3,10 @@
 ```
 src/jev_mcp/
   server.py    MCP tool definitions (MCPServer, mcp 2.x), validation, batch orchestration
-  client.py    Async HTTP client for POST /v1/systemone, with retries on 429/529
+  client.py    Async HTTP client: retries, provider fallback, disables dead keys
   sources.py   paths/globs/dirs/texts -> (id, text) items; binary skip; chunking
   compact.py   Converts raw Jev answers into short, token-cheap values
-  config.py    Settings from env vars; provider selection (TypeSafe / OpenRouter)
+  config.py    Settings from env vars; ordered endpoints (primary, optional fallback)
 ```
 
 ## Request flow
@@ -15,7 +15,8 @@ src/jev_mcp/
 2. `sources.iter_items` expands the paths and splits oversized text on newline boundaries into pieces of at most `JEV_CHUNK_CHARS` characters. Chunked items get ids like `file#0`.
 3. `run_batch` sends one request per item. Each request carries **all** the questions, because Jev answers them in parallel. Concurrency is capped by a semaphore of size `JEV_CONCURRENCY`.
 4. Answers are compacted (see `docs/tools.md`), and items with any unsure answer are listed in `unsure`.
-5. A failure on one item is recorded as `{"error": ...}` and does not fail the whole batch.
+5. `JevClient.ask` tries the endpoints in order. When a fallback exists, the primary gets one retry instead of a full backoff. 400/413/422 never fall back. 401/402/403 mark that provider as dead for the rest of the call.
+6. A failure on one item is recorded as `{"error": ...}` and does not fail the whole batch.
 
 ## Design principles
 

@@ -8,7 +8,9 @@ import pytest
 from mcp.server.mcpserver.exceptions import ToolError
 
 from jev_mcp.client import JevClient
-from jev_mcp.config import Settings
+from jev_mcp.config import Endpoint, Settings
+
+SETTINGS = Settings(endpoints=(Endpoint.default("typesafe", "k"),))
 from jev_mcp.server import JEV_ASK_SCHEMA, common_root, jev_ask, run_batch, shrink, validate_questions
 
 
@@ -37,7 +39,7 @@ def test_run_batch_compacts_and_flags_unsure():
     items = [("a", "I want a refund"), ("b", "hello"), ("c", "boom")]
 
     async def go():
-        async with JevClient(Settings(api_key="k"), transport=fake_transport(calls)) as client:
+        async with JevClient(SETTINGS, transport=fake_transport(calls)) as client:
             return await run_batch(client, items, questions, 0.6, verbose=False)
 
     out = asyncio.run(go())
@@ -82,7 +84,7 @@ def ok_transport():
 
 def test_multi_question_keeps_ids_and_omits_empty_unsure():
     async def go():
-        async with JevClient(Settings(api_key="k"), transport=ok_transport()) as c:
+        async with JevClient(SETTINGS, transport=ok_transport()) as c:
             qs = {"x": {"type": "noul", "instructions": "x"}, "y": {"type": "noul", "instructions": "y"}}
             return await run_batch(c, [("a", "t")], qs, 0.6, verbose=False)
 
@@ -93,7 +95,7 @@ def test_identical_errors_collapse_into_one_tool_error():
     bad = httpx.MockTransport(lambda r: httpx.Response(401, text="invalid key"))
 
     async def go():
-        async with JevClient(Settings(api_key="k"), transport=bad) as c:
+        async with JevClient(SETTINGS, transport=bad) as c:
             return await run_batch(c, [("a", "t"), ("b", "t")], {"q": {"type": "noul", "instructions": "q"}}, 0.6, False)
 
     with pytest.raises(ToolError, match="401"):
@@ -130,7 +132,7 @@ def test_network_error_is_per_item_not_fatal(monkeypatch):
         return httpx.Response(200, json={"answers": {"q": {"type": "noul", "noul": 0.9}}})
 
     async def go():
-        async with JevClient(Settings(api_key="k"), transport=httpx.MockTransport(handler)) as c:
+        async with JevClient(SETTINGS, transport=httpx.MockTransport(handler)) as c:
             return await run_batch(c, [("a", "up"), ("b", "down")], {"q": {"type": "noul", "instructions": "q"}}, 0.6, False)
 
     out = asyncio.run(go())
