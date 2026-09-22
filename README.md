@@ -75,8 +75,13 @@ Jev is a fast classifier, not a reasoning model. According to its [documentation
 pip install -e .[dev]
 ```
 ```bash
+git config core.hooksPath .githooks
+```
+```bash
 pytest
 ```
+
+The `pre-push` hook runs `pytest` and blocks the push if any test fails. Commit messages follow [Conventional Commits](https://www.conventionalcommits.org); see [AGENTS.md](AGENTS.md#commits).
 
 ## License
 
