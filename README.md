@@ -23,13 +23,18 @@ agent ◀── {file: {q: [answer, confidence]}, unsure: [...]} ◀── compa
 pip install git+https://github.com/NicolasRisso/JevMCP
 ```
 
-Get an API key at https://console.typesafe.ai/keys, then register the server with Claude Code:
+You need **one** API key. Either one works:
 
-```bash
-claude mcp add jev -e TYPESAFE_API_KEY=your_key -- jev-mcp
-```
+- **TypeSafe directly:** get a key at https://console.typesafe.ai/keys
+  ```bash
+  claude mcp add jev -e TYPESAFE_API_KEY=your_key -- jev-mcp
+  ```
+- **OpenRouter:** use your existing OpenRouter key. Jev is served through OpenRouter's alpha Decisions endpoint.
+  ```bash
+  claude mcp add jev -e OPENROUTER_API_KEY=your_key -- jev-mcp
+  ```
 
-For any other MCP client, run `jev-mcp` over stdio with `TYPESAFE_API_KEY` set.
+For any other MCP client, run `jev-mcp` over stdio with one of those keys set.
 
 ## Example
 
@@ -58,9 +63,11 @@ See [docs/tools.md](docs/tools.md) for the full tool reference.
 
 | Env var | Default | Meaning |
 |---|---|---|
-| `TYPESAFE_API_KEY` | (required) | Your TypeSafe API key |
-| `JEV_MODEL` | `jev-latest` | Model name sent to the API |
-| `JEV_API_URL` | `https://api.typesafe.ai/v1/systemone` | API endpoint |
+| `TYPESAFE_API_KEY` | | TypeSafe key. Set this or `OPENROUTER_API_KEY` |
+| `OPENROUTER_API_KEY` | | OpenRouter key. Set this or `TYPESAFE_API_KEY` |
+| `JEV_PROVIDER` | auto | `typesafe` or `openrouter`. Auto picks TypeSafe if its key is set, otherwise OpenRouter |
+| `JEV_MODEL` | `jev-latest` / `typesafe/jev-1.13` | Model name sent to the API (TypeSafe / OpenRouter default) |
+| `JEV_API_URL` | provider's endpoint | Override the endpoint URL |
 | `JEV_CONCURRENCY` | `16` | Max requests to Jev in flight at once |
 | `JEV_CHUNK_CHARS` | `60000` | Files larger than this are split into `path#N` chunks |
 | `JEV_MAX_ITEMS` | `500` | Refuses a call that would send more than this many items (safety cap) |

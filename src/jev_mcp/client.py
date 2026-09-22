@@ -1,4 +1,4 @@
-"""Thin async client for TypeSafe's System One endpoint."""
+"""Thin async client for Jev (TypeSafe System One or OpenRouter Decisions endpoint)."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import httpx
 
 from jev_mcp.config import Settings
 
-RETRY_STATUSES = {429, 529}
+RETRY_STATUSES = {429, 502, 503, 529}
 MAX_ATTEMPTS = 4
 
 
@@ -19,8 +19,6 @@ class JevError(Exception):
 
 class JevClient:
     def __init__(self, settings: Settings, transport: httpx.AsyncBaseTransport | None = None):
-        if not settings.api_key:
-            raise JevError("TYPESAFE_API_KEY is not set. Get one at https://console.typesafe.ai/keys")
         self._settings = settings
         self._sem = asyncio.Semaphore(settings.concurrency)
         self._http = httpx.AsyncClient(

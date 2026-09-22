@@ -6,7 +6,7 @@ src/jev_mcp/
   client.py    Async HTTP client for POST /v1/systemone, with retries on 429/529
   sources.py   paths/globs/dirs/texts -> (id, text) items; binary skip; chunking
   compact.py   Converts raw Jev answers into short, token-cheap values
-  config.py    Settings read from environment variables
+  config.py    Settings from env vars; provider selection (TypeSafe / OpenRouter)
 ```
 
 ## Request flow
@@ -27,7 +27,9 @@ src/jev_mcp/
 
 (Checked against docs.typesafe.ai, September 2026.)
 
-- Endpoint: `POST https://api.typesafe.ai/v1/systemone` with the header `Authorization: Bearer <key>`.
+- Endpoints (both use the header `Authorization: Bearer <key>` and the same request and response bodies):
+  - TypeSafe: `POST https://api.typesafe.ai/v1/systemone`, model `jev-latest`.
+  - OpenRouter: `POST https://openrouter.ai/api/alpha/decisions`, model `typesafe/jev-1.13` (`~typesafe/jev-latest` alias). This endpoint is in alpha, and its `usage` also reports `cost`.
 - Request: `{model, state, questions: {id: {type, instructions, criteria}}}`.
 - Response: `{model, answers: {id: {type, noul | choice | score, probabilities, confidence, legend}}, usage}`.
 - Limits: 64k tokens per request, of which 32k is for the state plus the longest question. Up to 255 choice options. Score takes 2–10 levels.
