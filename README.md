@@ -21,50 +21,72 @@ agent ◀── {file: {q: [answer, confidence]}, unsure: [...]} ◀── compa
 
 ## Install
 
-### 1. Get the package
+You need **one** API key: `OPENROUTER_API_KEY` (Jev is served through OpenRouter's alpha Decisions endpoint) or `TYPESAFE_API_KEY` (from https://console.typesafe.ai/keys). The commands below clone JevMCP into your home folder; change the path if you like.
 
-From a clone (recommended while JevMCP is pre-release):
+### Windows (PowerShell)
 
-```bash
-git clone https://github.com/NicolasRisso/JevMCP
+1. Get the package:
+
+```powershell
+git clone https://github.com/NicolasRisso/JevMCP "$HOME\JevMCP"
 ```
-```bash
-cd JevMCP && python -m venv .venv && .venv/Scripts/pip install -e .
-```
-
-On macOS/Linux use `.venv/bin/pip`. It's an editable install, so a `git pull` takes effect in every repo using it the next time the server starts.
-
-### 2. Provide an API key
-
-You need **one** of these. Either one works:
-
-- `OPENROUTER_API_KEY`: your OpenRouter key. Jev is served through OpenRouter's alpha Decisions endpoint.
-- `TYPESAFE_API_KEY`: from https://console.typesafe.ai/keys
-
-Set it as a user environment variable so every repo can use it without copying it around. On Windows, set it under *System Properties → Environment Variables*; on macOS/Linux, add `export OPENROUTER_API_KEY=...` to your shell profile. Then restart Claude Code.
-
-### 3. Register it in a repo (one command)
-
-From the root of the repo where you want to use it:
-
-```bash
-D:/path/to/JevMCP/.venv/Scripts/jev-mcp install
+```powershell
+python -m venv "$HOME\JevMCP\.venv"; & "$HOME\JevMCP\.venv\Scripts\pip.exe" install -e "$HOME\JevMCP"
 ```
 
-This runs `claude mcp add jev --scope local -- <that venv's python> -m jev_mcp`:
-- **Local scope:** only this repo, and stored in your Claude Code user config, **not** in the repo. Nothing gets committed.
-- `--scope user` registers it once for every repo.
-- `--provider openrouter` and `--fallback` pin the provider settings described below.
-- **Keys are never written by the installer.** The server reads them from your environment.
-- `jev-mcp uninstall` removes the registration.
+2. Save your key as a user environment variable (persists across reboots; the second command also sets it for the current window):
 
-### 4. Verify
-
-```bash
-D:/path/to/JevMCP/.venv/Scripts/jev-mcp check
+```powershell
+[Environment]::SetEnvironmentVariable('OPENROUTER_API_KEY', 'sk-or-...', 'User')
+```
+```powershell
+$env:OPENROUTER_API_KEY = 'sk-or-...'
 ```
 
-This sends one tiny request (a fraction of a cent) to each configured provider and prints the latency and the result. It never prints keys.
+For a TypeSafe key, use `TYPESAFE_API_KEY` instead. From `cmd.exe`, `setx OPENROUTER_API_KEY sk-or-...` does the same as the first command. **Restart Claude Code** (and other open terminals) afterwards so they see the new variable.
+
+3. Register it, from the root of the repo where you want to use it:
+
+```powershell
+& "$HOME\JevMCP\.venv\Scripts\jev-mcp.exe" install
+```
+
+4. Verify:
+
+```powershell
+& "$HOME\JevMCP\.venv\Scripts\jev-mcp.exe" check
+```
+
+### macOS / Linux
+
+```bash
+git clone https://github.com/NicolasRisso/JevMCP ~/JevMCP
+```
+```bash
+python3 -m venv ~/JevMCP/.venv && ~/JevMCP/.venv/bin/pip install -e ~/JevMCP
+```
+```bash
+echo 'export OPENROUTER_API_KEY=sk-or-...' >> ~/.bashrc && source ~/.bashrc
+```
+
+Use `~/.zshrc` on macOS. Then, from the root of the repo where you want to use it:
+
+```bash
+~/JevMCP/.venv/bin/jev-mcp install
+```
+```bash
+~/JevMCP/.venv/bin/jev-mcp check
+```
+
+### What the commands do
+
+- It's an editable install, so a `git pull` in the JevMCP folder takes effect in every repo the next time the server starts.
+- `install` runs `claude mcp add jev --scope local -- <that venv's python> -m jev_mcp`. **Local scope:** only this repo, stored in your Claude Code user config, **not** in the repo, so nothing gets committed.
+  - `--scope user` registers it once for every repo.
+  - `--provider openrouter` and `--fallback` pin the provider settings described below.
+  - **Keys are never written by the installer.** The server reads them from your environment.
+  - `jev-mcp uninstall` removes the registration.
+- `check` sends one tiny request (a fraction of a cent) to each configured provider and prints the latency and the result. It never prints keys.
 
 ### Linux servers (over SSH)
 
